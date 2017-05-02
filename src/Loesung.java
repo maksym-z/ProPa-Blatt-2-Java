@@ -22,7 +22,6 @@ public class Loesung {
 		Vertex parent;
 		
 		long weightRemaining;
-		int powerConsumed;
 		int index;
 		int touchedCount;
 		boolean[] touchedPockets;
@@ -32,7 +31,6 @@ public class Loesung {
 		
 		Vertex (Vertex root, int boxIndex, long parentWeight, long steps2) {
 			index = boxIndex;
-			powerConsumed = powers[boxIndex];
 			parent = root;
 			this.steps = steps2;
 			if (root!=null) {
@@ -44,7 +42,7 @@ public class Loesung {
 					touchedPockets[boxIndex] = true;
 					touchedCount++;
 				}
-				weightRemaining = parentWeight - tenToPowerOf(powerConsumed)*steps2;
+				weightRemaining = parentWeight - tenToPowerOf(powers[boxIndex])*steps2;
 			} else {
 				// Root init
 				touchedCount = 0;
@@ -57,24 +55,29 @@ public class Loesung {
 			}
 		}
 		
+		/**
+		 * Branch the decision tree at this vertex.
+		 */
 		void produceChildren() {
 			for (int i = counts.length-1; i >= 0; i--) {
 				if (tenToPowerOf(powers[i]) <= weightRemaining && counts[i]>0) {
-					long steps = Math.min(counts[i],Math.floorDiv(weightRemaining, tenToPowerOf(powers[i])));
+					long steps = Math.min(counts[i],weightRemaining/tenToPowerOf(powers[i]));
 					children.add(new Vertex(this,i,weightRemaining,steps));
 				} 
 			}
 		}
 
+		/**
+		 * The "bound" part of branch-and-bound.
+		 * @return true if visiting this node can improve the result, else false
+		 */
 		public boolean canImproveResult() {
-			// TODO: better heuristics
 			if ((touchedPockets[index] && touchedCount < bestResultSoFar) || (!touchedPockets[index] && touchedCount + 1 < bestResultSoFar)) {
 				if (touchedPockets[index] && bestResultSoFar - touchedCount == 1 && counts[index]*tenToPowerOf(powers[index]) < weightRemaining) {
 					return false;
 				}
 				return true;
 			} else {
-				//System.out.println("Touched: " + touchedPockets[index]);
 				return false;
 			}
 		}
@@ -99,7 +102,7 @@ public class Loesung {
 	}
 	
 	/**
-	 * 
+	 * Travere the tree recursively
 	 * @param vertex
 	 * @return remaining weight
 	 */
@@ -114,7 +117,6 @@ public class Loesung {
 			while (!vertex.children.isEmpty()) {
 				Vertex child = vertex.children.poll();
 				if (child.canImproveResult()) {
-					System.out.println(vertex.weightRemaining + ": exploring child " + tenToPowerOf(child.powerConsumed) + " * " + child.steps + ", wt " + child.weightRemaining + ", touched " + child.touchedCount + ", visited " + nodesVisited);
 					long childResult = visitRecursively(child);
 					if (childResult == 0) {
 						updateBestResultSoFar(child);
@@ -150,10 +152,9 @@ public class Loesung {
 		initArrays(schachteln);
 		Vertex root = new Vertex(null, 0, zielgewicht,0);
 		nodesVisited = 0;
-		
 		visitRecursively(root);
-		System.out.println("Nodes visited: " + nodesVisited);
-		System.out.println("Best result: " + bestResultSoFar);
+/*		System.out.println("Nodes visited: " + nodesVisited);
+		System.out.println("Best result: " + bestResultSoFar);*/
 		if (bestResult==null) {
 			return null;
 		} else {
@@ -161,15 +162,14 @@ public class Loesung {
 		}
 	}
 
-private static List<Schachtel> removeUnused(List<Schachtel> schachteln) {
-	ArrayList<Schachtel> returnList = new ArrayList<>();
-	int forEachIndex = 0;
-	for (Schachtel s: schachteln) {
-		if (bestResult.touchedPockets[forEachIndex]) {
-			returnList.add(s);
-		};
-		forEachIndex++;
+	private static List<Schachtel> removeUnused(List<Schachtel> schachteln) {
+		ArrayList<Schachtel> returnList = new ArrayList<>();
+		int forEachIndex = 0;
+		for (int i = 0; i<schachteln.size();i++) {
+			if (bestResult.touchedPockets[forEachIndex]) {
+				returnList.add(schachteln.get(i));
+			}
+		}
+		return returnList;
 	}
-	return returnList;
-}
 }
